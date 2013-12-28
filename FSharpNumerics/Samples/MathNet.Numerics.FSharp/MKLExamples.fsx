@@ -16,16 +16,19 @@ open System.Diagnostics
 // NB: To run this using the the 64 bit MKL, please ensure that
 // you're using the 64 bit FSI.  To ensure that this is the case, 
 // Tools -> Options -> F# Tools -> 64bit F# Interactive -> True
+//-------------------------------------------------------------
+
+let matrixDim  = 1000 // 1000 x 1000 matrices.
+let iterations =   10 //
 
 let setWorkingDirectoryToPointToMKLAssemblies() = // see http://christoph.ruegg.name/blog/loading-native-dlls-in-fsharp-interactive.html
     let workingDir = Path.Combine( __SOURCE_DIRECTORY__, @"..\..\")
     System.Environment.CurrentDirectory <- workingDir
 
 let getRandomMatrices() = 
-    let dim = 1000
     let dist = Normal.WithMeanVariance(0.0, 1.0)
-    let a = DenseMatrix.randomCreate dim dim dist
-    let b = DenseMatrix.randomCreate dim dim dist
+    let a = DenseMatrix.randomCreate matrixDim matrixDim dist
+    let b = DenseMatrix.randomCreate matrixDim matrixDim dist
     a,b
 
 let testLAProvider provider a b = 
@@ -48,18 +51,10 @@ setWorkingDirectoryToPointToMKLAssemblies()
 
 let a,b = getRandomMatrices()
 
-let results = 
-        [
-            testLAProvider (MklLinearAlgebraProvider()    ) a b 
-            testLAProvider (ManagedLinearAlgebraProvider()) a b 
-        ]
-
 let resultSeq genFn = Seq.initInfinite (fun _ -> genFn())
+let mklSeq          = resultSeq (fun _ -> testLAProvider (MklLinearAlgebraProvider()    ) a b)
+let managedSeq      = resultSeq (fun _ -> testLAProvider (ManagedLinearAlgebraProvider()) a b)
 
-let mklSeq     = resultSeq (fun _ -> testLAProvider (MklLinearAlgebraProvider()    ) a b)
-let managedSeq = resultSeq (fun _ -> testLAProvider (ManagedLinearAlgebraProvider()) a b)
-
-let iterations = 10
 let mklAvg     = mklSeq     |> Seq.take iterations |> Seq.averageBy (fun result -> float (fst result))
 let managedAvg = managedSeq |> Seq.take iterations |> Seq.averageBy (fun result -> float (fst result))
 
